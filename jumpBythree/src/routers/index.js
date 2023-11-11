@@ -1,6 +1,6 @@
-import { createRouter, createWebHistory } 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'; 
 
-let routes = [{ path: '/', component: require('../views/index.vue') }]
+let routes = [{ path: '/', component: ()=> import('../views/index.vue')}]
 
 const router = new createRouter({
     routes, history: createWebHistory()
