@@ -1,5 +1,5 @@
 <template>
-  <div class="Wrap" @click="movePlayer">
+  <div class="Wrap" @mousedown="mousedown" @mouseup="mouseup">
     <canvas id="game"></canvas>
   </div>
 </template>
@@ -7,8 +7,11 @@
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import * as THREE from "three";
 import { Cube, Player } from "@/utils/gameItems.js";
+const store = ref(0);
 const gameScene = ref(null);
 const gameCamera = ref(null);
+const strength = ref(null);
+const strengthTimer = ref(null);
 const isRun = ref(false);
 const gameDirection = ref("right");
 const cubeInfo = reactive({ x: 0, z: 0, long: 0, width: 0 });
@@ -18,32 +21,82 @@ const gamePlayer = reactive({
   y: 0,
   z: 0,
 });
-const movePlayer = () => {
+
+const mousedown = (e) => {
+  if(e.button!==0)return
   if (isRun.value) return;
+  strengthTimer.value = setInterval(() => {
+    strength.value += 20;
+
+    gamePlayer.role.scale.y -= 0.05;
+    gamePlayer.role.position.y -= 1.1;
+    if (strength.value >= 350) {
+      strength.value = 350;
+      gamePlayer.role.scale.y = 0.1;
+      gamePlayer.role.position.y = 55;
+    }
+  }, 100);
+};
+const mouseup = (e) => {
+  if(e.button!==0)return
+  if (isRun.value) return;
+  clearInterval(strengthTimer.value);
+  gamePlayer.role.scale.y = 1;
+  gamePlayer.role.position.y = 75;
+  if (strength.value < 30) {
+    strength.value = 0;
+  } else {
+    movePlayer();
+  }
+};
+const movePlayer = () => {
   isRun.value = true;
   let playerRunObj = {
     duration: 1,
-    keyframes:{y:[75,120,75]},
+    keyframes: { y: [75, 120, 75] },
     onComplete: () => {
       gamePlayer.x = gamePlayer.role.position.x;
       gamePlayer.z = gamePlayer.role.position.z;
       isRun.value = false;
-      createCube();
+      // 力度清0
+      strength.value = 0;
+      // 先判断一下是否还在平台上
+      if (
+        gamePlayer.x < cubeInfo.x + cubeInfo.long / 2 &&
+        gamePlayer.x > cubeInfo.x - cubeInfo.long / 2 &&
+        gamePlayer.z < cubeInfo.z + cubeInfo.width / 2 &&
+        gamePlayer.z > cubeInfo.z - cubeInfo.width / 2
+      ) {
+        createCube();
+        store.value++;
+        console.log("得分：" + store.value);
+      } else {
+        gsap.to(gamePlayer.role.position, {
+          y: -50,
+          duration: 1,
+          onComplete: () => {
+            gamePlayer.role.visible = false;
+            let rePlay = confirm("重新开始");
+            if (rePlay) {
+              location.reload();
+            }
+          },
+        });
+        gsap.to(gamePlayer.role.rotation, { z: -1.5, duration: 1 });
+        console.log("得分：" + store.value);
+      }
     },
     onUpdate: () => {
-      
       // 移动摄像机
       gameCamera.value.position.x = gamePlayer.role.position.x - 250;
       gameCamera.value.position.z = gamePlayer.role.position.z + 250;
     },
   };
 
-
-
   if (gameDirection.value === "right") {
-    playerRunObj.x = 200 + gamePlayer.x;
+    playerRunObj.x = strength.value + gamePlayer.x;
   } else {
-    playerRunObj.z = 200 + gamePlayer.z;
+    playerRunObj.z = strength.value + gamePlayer.z;
   }
   gsap.to(gamePlayer.role.position, playerRunObj);
 };
@@ -70,11 +123,13 @@ const createCube = () => {
   let distanceX = gameDirection.value === "right" ? distance + cubeInfo.x : cubeInfo.x;
   let distanceZ = gameDirection.value === "up" ? distance + cubeInfo.z : cubeInfo.z;
   cube.position.set(distanceX, 0, distanceZ);
+
+  gameScene.value.add(cube);
+  gsap.fromTo(cube.scale, { y: 0.6 }, { y: 1 });
   cubeInfo.x = distanceX;
   cubeInfo.z = distanceZ;
-  cubeInfo.long = longOrwidth;
-  cubeInfo.width = longOrwidth;
-  gameScene.value.add(cube);
+  cubeInfo.long = cubeX;
+  cubeInfo.width = cubeZ;
 };
 const initThree = () => {
   // 创建场景
@@ -107,8 +162,8 @@ const initThree = () => {
   scene.add(hemLight);
 
   //   创建坐标系
-  const axes = new THREE.AxesHelper(50000);
-  scene.add(axes);
+  // const axes = new THREE.AxesHelper(50000);
+  // scene.add(axes);
   //  创建一个轨道控制器
   // const controls = new OrbitControls(camera, canvas);
   // controls.enableDamping = true;
