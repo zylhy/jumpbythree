@@ -1,2 +1,3 @@
-# jumpbythree
-使用threejs完成跳一跳小游戏
+脚手架：vue+vite
+3d库：three
+动画库：gsap
