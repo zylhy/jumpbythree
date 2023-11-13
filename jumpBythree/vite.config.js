@@ -8,8 +8,9 @@ export default defineConfig({
   plugins: [vue(), AutoImport({
     imports: ['vue', 'vue-router', {
       '@/utils/index.js': [
-        'requireImg'
-      ]
+        'getRandomInt'
+      ],
+      'gsap':['gsap']
     }
     ],
     dts: "src/auto-import.d.ts",
